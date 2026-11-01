@@ -151,6 +151,9 @@ private struct ConvertView: View {
             }
         }
         statusView
+        if let hint = model.file.flatMap(Converter.hint(for:)) {
+            Text(hint).font(.caption2).foregroundStyle(.white.opacity(0.4)).lineLimit(2)
+        }
         Spacer(minLength: 0)
     }
 

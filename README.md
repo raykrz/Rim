@@ -10,7 +10,7 @@ On Macs without a notch, Notchpad draws a small pill at the top center of the sc
 
 | Module | Status |
 |---|---|
-| Clipboard history (text, code, links, auto-expiring secrets) | Working |
+| Clipboard history (text, code, links, files, auto-expiring secrets) | Working |
 | Convert (drop a file or use the Finder selection) | Working |
 | Shelf (temporary drop zone for files) | Planned |
 | Dev tools (JSON, Base64, UUID, JWT, ...) | Planned |
@@ -24,10 +24,16 @@ Drag a file onto the notch, or click "Use Finder selection" in the Convert tab. 
 |---|---|
 | Images (PNG, JPG, HEIC, TIFF, GIF, BMP) | JPG, PNG, PDF |
 | Word, RTF, HTML, text, Markdown, ODT | Word, text, HTML, RTF, PDF |
-| PDF | Text, Word (text only), PNG (page 1) |
+| PDF | Text, Word (editable text or exact look), PNG (page 1) |
 | MOV, MP4, M4V | MP4, M4A audio |
 
-PDF to Word keeps the text but not the layout. "Use Finder selection" asks for Automation permission the first time.
+Word to PDF reads `.docx` files directly, so tables, images, lists, links and basic styling carry over. Headers, footers and complex layouts aren't covered.
+
+PDF to Word has two modes. "Editable text" keeps bold, italic and sizes and re-joins wrapped lines into paragraphs, but drops images and table structure. "Exact look" puts each page in the Word file as a picture, so it looks identical but isn't editable.
+
+If [LibreOffice](https://www.libreoffice.org) is installed, Notchpad uses it for Word to PDF and adds a "to Word (LibreOffice)" option for PDFs, which gives the best layout in both directions.
+
+"Use Finder selection" asks for Automation permission the first time.
 
 ## Privacy
 

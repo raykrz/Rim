@@ -51,7 +51,11 @@ private struct ClipboardView: View {
                 }
             } label: {
                 HStack(spacing: 8) {
-                    Image(systemName: icon(item.kind)).frame(width: 16).foregroundStyle(tint(item.kind))
+                    if item.kind == .file, let url = item.fileURLs.first {
+                        Image(nsImage: NSWorkspace.shared.icon(forFile: url.path)).resizable().frame(width: 16, height: 16)
+                    } else {
+                        Image(systemName: icon(item.kind)).frame(width: 16).foregroundStyle(tint(item.kind))
+                    }
                     Text(isSecret && revealed ? item.text : item.preview)
                         .font(item.kind == .code || isSecret ? .system(size: 12, design: .monospaced) : .system(size: 12))
                         .foregroundStyle(.white.opacity(0.9))
@@ -81,7 +85,12 @@ private struct ClipboardView: View {
         }
         .padding(.horizontal, 10).padding(.vertical, 6)
         .background(RoundedRectangle(cornerRadius: 8).fill(.white.opacity(0.07)))
-        .contextMenu { Button("Remove") { store.remove(item) } }
+        .contextMenu {
+            if item.kind == .file {
+                Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting(item.fileURLs) }
+            }
+            Button("Remove") { store.remove(item) }
+        }
     }
 
     private func icon(_ kind: ClipItem.Kind) -> String {
@@ -90,6 +99,7 @@ private struct ClipboardView: View {
         case .code: return "chevron.left.forwardslash.chevron.right"
         case .link: return "link"
         case .secret: return "key.fill"
+        case .file: return "doc"
         }
     }
 
@@ -99,6 +109,7 @@ private struct ClipboardView: View {
         case .code: return .purple
         case .link: return .blue
         case .secret: return .orange
+        case .file: return .white.opacity(0.6)
         }
     }
 
@@ -108,6 +119,7 @@ private struct ClipboardView: View {
         case .code: return "code"
         case .link: return "link"
         case .secret: return "secret · wiped in 60s"
+        case .file: return "file"
         }
     }
 }
