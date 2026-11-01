@@ -11,7 +11,7 @@ protocol NotchModule {
 enum ModuleRegistry {
     static let all: [any NotchModule] = [
         ClipboardModule(),
-        PlaceholderModule(id: "convert", title: "Convert", systemImage: "arrow.triangle.2.circlepath", blurb: "Convert the selected file: HEIC to JPG, Markdown to PDF, and more."),
+        ConvertModule(),
         PlaceholderModule(id: "shelf", title: "Shelf", systemImage: "tray.and.arrow.down", blurb: "Park files here while you move between apps."),
         PlaceholderModule(id: "devtools", title: "Dev tools", systemImage: "hammer", blurb: "JSON, Base64, UUID, JWT and more, applied to your clipboard."),
         PlaceholderModule(id: "focus", title: "Focus", systemImage: "timer", blurb: "Pomodoro timer and media controls."),

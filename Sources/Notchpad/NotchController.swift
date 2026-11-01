@@ -46,7 +46,14 @@ final class NotchController {
         cancelPending()
         guard !state.isOpen else { return }
         panel.ignoresMouseEvents = false
+        if isDraggingFiles { state.selectedModule = "convert" }
         state.isOpen = true
+    }
+
+    /// True while the user is mid-drag with files from Finder or another app.
+    private var isDraggingFiles: Bool {
+        NSEvent.pressedMouseButtons & 1 != 0
+            && NSPasteboard(name: .drag).canReadObject(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true])
     }
 
     func close() {

@@ -34,6 +34,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleVersion</key><string>${VERSION}</string>
   <key>LSMinimumSystemVersion</key><string>13.0</string>
   <key>LSUIElement</key><true/>
+  <key>NSAppleEventsUsageDescription</key><string>Notchpad reads which file is selected in Finder so it can offer conversions.</string>
   <key>NSHighResolutionCapable</key><true/>
 </dict>
 </plist>
