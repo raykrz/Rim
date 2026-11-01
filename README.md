@@ -4,7 +4,7 @@ A command deck for developers that lives in your MacBook's notch. Hover the notc
 
 On Macs without a notch, Notchpad draws a small pill at the top center of the screen instead.
 
-> Early development. The clipboard and convert modules work so far.
+> Early development. Clipboard, Convert and Shelf work so far.
 
 ## Modules
 
@@ -12,13 +12,17 @@ On Macs without a notch, Notchpad draws a small pill at the top center of the sc
 |---|---|
 | Clipboard history (text, code, links, files, auto-expiring secrets) | Working |
 | Convert (drop a file or use the Finder selection) | Working |
-| Shelf (temporary drop zone for files) | Planned |
+| Shelf (temporary drop zone for files) | Working |
 | Dev tools (JSON, Base64, UUID, JWT, ...) | Planned |
 | Focus (timer and media controls) | Planned |
 
+## Shelf
+
+Drag files onto the notch and two drop zones appear: Convert and Shelf. Drop on Shelf to park the files, then drag them out into any app later. Right-click a file for Open, Show in Finder, Convert and Remove. The shelf holds references to the original files, not copies, and is emptied when you quit.
+
 ## Convert
 
-Drag a file onto the notch, or click "Use Finder selection" in the Convert tab. It uses only tools built into macOS, so nothing extra to install. Results are saved next to the original.
+Drop a file on the Convert zone, or click "Use Finder selection" in the Convert tab. It uses only tools built into macOS, so nothing extra to install. Results are saved next to the original.
 
 | From | To |
 |---|---|

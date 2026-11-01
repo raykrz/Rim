@@ -24,10 +24,14 @@ struct NotchRootView: View {
 
     private var content: some View {
         VStack(spacing: 8) {
-            tabBar
-            if let module = ModuleRegistry.module(id: state.selectedModule) {
-                module.makeView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            if state.isDragging {
+                DropChooser(state: state)
+            } else {
+                tabBar
+                if let module = ModuleRegistry.module(id: state.selectedModule) {
+                    module.makeView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             }
         }
         .padding(.top, state.closedSize.height + 4)

@@ -12,7 +12,7 @@ enum ModuleRegistry {
     static let all: [any NotchModule] = [
         ClipboardModule(),
         ConvertModule(),
-        PlaceholderModule(id: "shelf", title: "Shelf", systemImage: "tray.and.arrow.down", blurb: "Park files here while you move between apps."),
+        ShelfModule(),
         PlaceholderModule(id: "devtools", title: "Dev tools", systemImage: "hammer", blurb: "JSON, Base64, UUID, JWT and more, applied to your clipboard."),
         PlaceholderModule(id: "focus", title: "Focus", systemImage: "timer", blurb: "Pomodoro timer and media controls."),
     ]

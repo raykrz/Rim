@@ -4,7 +4,7 @@ import SwiftUI
 /// Owns the panel and decides when the notch opens and closes based on the mouse position.
 @MainActor
 final class NotchController {
-    let state = NotchState()
+    let state = NotchState.shared
 
     private let panel = NotchPanel()
     private var geometry: NotchGeometry
@@ -25,11 +25,12 @@ final class NotchController {
         panel.ignoresMouseEvents = true
         panel.orderFrontRegardless()
 
-        let global = NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged]) { [weak self] _ in
-            Task { @MainActor in self?.mouseChanged() }
+        let mask: NSEvent.EventTypeMask = [.mouseMoved, .leftMouseDragged, .leftMouseDown, .leftMouseUp]
+        let global = NSEvent.addGlobalMonitorForEvents(matching: mask) { [weak self] event in
+            Task { @MainActor in self?.handle(event.type) }
         }
-        let local = NSEvent.addLocalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged]) { [weak self] event in
-            Task { @MainActor in self?.mouseChanged() }
+        let local = NSEvent.addLocalMonitorForEvents(matching: mask) { [weak self] event in
+            Task { @MainActor in self?.handle(event.type) }
             return event
         }
         monitors = [global, local].compactMap { $0 }
@@ -46,7 +47,7 @@ final class NotchController {
         cancelPending()
         guard !state.isOpen else { return }
         panel.ignoresMouseEvents = false
-        if isDraggingFiles { state.selectedModule = "convert" }
+        state.isDragging = isDraggingFiles
         state.isOpen = true
     }
 
@@ -60,10 +61,45 @@ final class NotchController {
         cancelPending()
         guard state.isOpen, !state.pinned else { return }
         state.isOpen = false
+        state.isDragging = false
         panel.ignoresMouseEvents = true
     }
 
     // MARK: - Hover logic
+
+    private var dragPoll: Timer?
+
+    private func handle(_ type: NSEvent.EventType) {
+        switch type {
+        case .leftMouseDown:
+            startDragPolling()
+        case .leftMouseUp:
+            // Let a drop land before the file chooser goes away.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
+                guard let self, NSEvent.pressedMouseButtons & 1 == 0 else { return }
+                self.state.isDragging = false
+            }
+            mouseChanged()
+        default:
+            mouseChanged()
+        }
+    }
+
+    /// While a button is held, macOS doesn't send other apps' drag events during a drag session,
+    /// so follow the pointer with a timer until the button is released.
+    private func startDragPolling() {
+        guard dragPoll == nil else { return }
+        dragPoll = Timer.scheduledTimer(withTimeInterval: 1.0 / 30, repeats: true) { [weak self] timer in
+            Task { @MainActor in
+                guard let self else { return }
+                if NSEvent.pressedMouseButtons & 1 == 0 {
+                    timer.invalidate()
+                    self.dragPoll = nil
+                }
+                self.mouseChanged()
+            }
+        }
+    }
 
     private func mouseChanged() {
         let inside = hoverRect.contains(NSEvent.mouseLocation)
@@ -79,9 +115,10 @@ final class NotchController {
         } else {
             openWork?.cancel()
             openWork = nil
-            if state.isOpen, !state.pinned, closeWork == nil {
+            if state.isOpen, !state.pinned, closeWork == nil, NSEvent.pressedMouseButtons & 1 == 0 {
                 schedule(\.closeWork, after: closeDelay) { [weak self] in
-                    guard let self, !self.hoverRect.contains(NSEvent.mouseLocation) else { return }
+                    guard let self, !self.hoverRect.contains(NSEvent.mouseLocation),
+                          NSEvent.pressedMouseButtons & 1 == 0 else { return }
                     self.close()
                 }
             }

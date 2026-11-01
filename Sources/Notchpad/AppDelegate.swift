@@ -13,9 +13,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         installStatusItem()
 
         // `Notchpad --pinned` starts with the notch held open, handy for screenshots and testing.
-        if CommandLine.arguments.contains("--pinned") {
+        // `--tab=<id>` picks the starting tab, `--shelf=<path>` preloads a file, `--dragging` shows the drop chooser.
+        let args = CommandLine.arguments
+        if let tab = args.first(where: { $0.hasPrefix("--tab=") }) {
+            controller.state.selectedModule = String(tab.dropFirst("--tab=".count))
+        }
+        ShelfStore.shared.add(args.filter { $0.hasPrefix("--shelf=") }.map { URL(fileURLWithPath: String($0.dropFirst("--shelf=".count))) })
+        if args.contains("--pinned") {
             controller.state.pinned = true
             controller.open()
+            controller.state.isDragging = args.contains("--dragging")
         }
     }
 
