@@ -2,7 +2,7 @@
 // Writes assets/icon.png (1024) and assets/banner.png (1280x640). make-icon.sh turns the icon into AppIcon.icns.
 import AppKit
 
-let accent = NSColor(srgbRed: 1.0, green: 0.72, blue: 0.28, alpha: 1)
+let accent = NSColor(srgbRed: 0.655, green: 0.545, blue: 0.98, alpha: 1)
 let outDir = URL(fileURLWithPath: CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "assets")
 try? FileManager.default.createDirectory(at: outDir, withIntermediateDirectories: true)
 
@@ -37,7 +37,7 @@ func notchPath(centerX: CGFloat, top: CGFloat, width: CGFloat, height: CGFloat, 
     return path
 }
 
-/// The "rim light": a stroke that is invisible at the top and bright amber along the bottom edge, with a soft glow.
+/// The "rim light": a stroke that is invisible at the top and bright violet along the bottom edge, with a soft glow.
 func drawRim(_ ctx: CGContext, path: CGPath, lineWidth: CGFloat, glow: CGFloat, topY: CGFloat, bottomY: CGFloat) {
     let space = CGColorSpaceCreateDeviceRGB()
     let gradient = CGGradient(colorsSpace: space, colors: [
@@ -127,7 +127,7 @@ let banner = render(width: 1280, height: 640) { ctx in
     ctx.setFillColor(NSColor(srgbRed: 0.035, green: 0.035, blue: 0.043, alpha: 1).cgColor)
     ctx.fill(CGRect(x: 0, y: 0, width: W, height: H))
 
-    // Soft pool of warm light under the panel.
+    // Soft pool of violet light under the panel.
     let glow = CGGradient(colorsSpace: space, colors: [
         accent.withAlphaComponent(0.13).cgColor, accent.withAlphaComponent(0).cgColor,
     ] as CFArray, locations: [0, 1])!

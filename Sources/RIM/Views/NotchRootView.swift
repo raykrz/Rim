@@ -114,6 +114,7 @@ struct NotchRootView: View {
 
             Menu {
                 Button(state.pinned ? "Unpin" : "Keep open") { state.pinned.toggle() }
+                Toggle("Launch at login", isOn: Binding(get: { LoginItem.isEnabled }, set: { _ in LoginItem.toggle() }))
                 Divider()
                 Button("Quit RIM") { NSApp.terminate(nil) }
             } label: {
