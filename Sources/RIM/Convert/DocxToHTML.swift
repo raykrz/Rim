@@ -11,7 +11,7 @@ struct DocxPage {
 enum DocxToHTML {
     static func convert(_ url: URL) throws -> DocxPage {
         let fm = FileManager.default
-        let dir = fm.temporaryDirectory.appendingPathComponent("notchpad-docx-" + UUID().uuidString)
+        let dir = fm.temporaryDirectory.appendingPathComponent("rim-docx-" + UUID().uuidString)
         try fm.createDirectory(at: dir, withIntermediateDirectories: true)
         defer { try? fm.removeItem(at: dir) }
 

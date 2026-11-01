@@ -20,6 +20,7 @@ final class NotchController {
     }
 
     func start() {
+        FocusModel.shared.onFinish = { [weak self] in self?.announceFocusFinished() }
         applyGeometry()
         panel.contentView = NSHostingView(rootView: NotchRootView(state: state))
         panel.ignoresMouseEvents = true
@@ -63,6 +64,16 @@ final class NotchController {
         state.isOpen = false
         state.isDragging = false
         panel.ignoresMouseEvents = true
+    }
+
+    /// Pops the notch open on the Focus tab when the timer ends, then tucks it away unless you're using it.
+    private func announceFocusFinished() {
+        state.selectedModule = "focus"
+        open()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 8) { [weak self] in
+            guard let self, !self.hoverRect.contains(NSEvent.mouseLocation) else { return }
+            self.close()
+        }
     }
 
     // MARK: - Hover logic
@@ -127,7 +138,7 @@ final class NotchController {
 
     /// The area that counts as "hovering the notch". NSRect.contains excludes the top edge, so extend upward.
     private var hoverRect: NSRect {
-        let size = state.isOpen ? NotchGeometry.openSize : state.closedSize
+        let size = state.isOpen ? NotchGeometry.openSize : state.collapsedSize
         var rect = geometry.rect(size: size).insetBy(dx: -10, dy: 0)
         rect.size.height += 4
         rect.origin.y -= state.isOpen ? 8 : 0

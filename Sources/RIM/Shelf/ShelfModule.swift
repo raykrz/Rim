@@ -47,7 +47,7 @@ private struct ShelfView: View {
         }
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(Color.blue.opacity(targeted ? 0.9 : 0), lineWidth: 2)
+                .strokeBorder(Theme.accent.opacity(targeted ? 0.9 : 0), lineWidth: 2)
         )
     }
 }

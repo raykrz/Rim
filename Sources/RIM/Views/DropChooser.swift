@@ -6,11 +6,11 @@ struct DropChooser: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            zone(title: "Convert", subtitle: "Change the file type", systemImage: "arrow.triangle.2.circlepath", color: .purple) { urls in
+            zone(title: "Convert", subtitle: "Change the file type", systemImage: "arrow.triangle.2.circlepath", color: Theme.accent) { urls in
                 if let first = urls.first { ConvertModel.shared.select(first) }
                 state.selectedModule = "convert"
             }
-            zone(title: "Shelf", subtitle: "Park it for later", systemImage: "tray.and.arrow.down", color: .blue) { urls in
+            zone(title: "Shelf", subtitle: "Park it for later", systemImage: "tray.and.arrow.down", color: .white) { urls in
                 ShelfStore.shared.add(urls)
                 state.selectedModule = "shelf"
             }

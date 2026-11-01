@@ -2,7 +2,9 @@ import AppKit
 
 /// Size and position of the notch (or a stand-in pill on Macs without one).
 struct NotchGeometry {
-    static let openSize = CGSize(width: 620, height: 230)
+    static let openSize = CGSize(width: 620, height: 260)
+    /// Extra width on each side of the collapsed notch while the focus timer is active.
+    static let wing: CGFloat = 58
     private static let fallbackPill = CGSize(width: 190, height: 24)
 
     let screen: NSScreen

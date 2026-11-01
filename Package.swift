@@ -2,12 +2,12 @@
 import PackageDescription
 
 let package = Package(
-    name: "Notchpad",
+    name: "RIM",
     platforms: [.macOS(.v13)],
     products: [
-        .executable(name: "Notchpad", targets: ["Notchpad"])
+        .executable(name: "RIM", targets: ["RIM"])
     ],
     targets: [
-        .executableTarget(name: "Notchpad", path: "Sources/Notchpad")
+        .executableTarget(name: "RIM", path: "Sources/RIM")
     ]
 )

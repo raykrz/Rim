@@ -62,7 +62,7 @@ private struct ClipboardView: View {
                         .lineLimit(1)
                     Spacer(minLength: 8)
                     Text(copiedID == item.id ? "Copied" : label(item.kind))
-                        .font(.caption2).foregroundStyle(copiedID == item.id ? Color.green : .white.opacity(0.4))
+                        .font(.caption2).foregroundStyle(copiedID == item.id ? Theme.success : .white.opacity(0.4))
                 }
                 .contentShape(Rectangle())
             }
@@ -106,9 +106,9 @@ private struct ClipboardView: View {
     private func tint(_ kind: ClipItem.Kind) -> Color {
         switch kind {
         case .text: return .white.opacity(0.6)
-        case .code: return .purple
-        case .link: return .blue
-        case .secret: return .orange
+        case .code: return Theme.accent
+        case .link: return .white.opacity(0.85)
+        case .secret: return Theme.warning
         case .file: return .white.opacity(0.6)
         }
     }

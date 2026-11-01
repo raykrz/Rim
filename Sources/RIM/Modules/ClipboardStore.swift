@@ -133,9 +133,13 @@ final class ClipboardStore: ObservableObject {
 
     /// Heuristic: one whitespace-free token of 8-64 characters mixing at least three of
     /// lowercase, uppercase, digits and symbols, and either containing a symbol or being 12+ long.
-    /// It will sometimes flag identifiers; those are only masked, never lost.
+    /// Rejects anything with quotes, braces or angle brackets, or that starts like a path. It will sometimes flag identifiers; those are only masked, never lost.
     static func looksLikePassword(_ s: String) -> Bool {
         guard (8...64).contains(s.count), !s.contains(where: \.isWhitespace) else { return false }
+        // Compact JSON, markup, and file paths have symbols and mixed case too, but aren't passwords.
+        guard !s.contains(where: { "\"{}<>".contains($0) }), !["/", "~", ".", "["].contains(where: { s.hasPrefix($0) }) else { return false }
+        // Bare domains and links like github.com/user/repo have mixed characters too, but aren't passwords.
+        if s.range(of: #"^[A-Za-z0-9.-]+\.[A-Za-z]{2,}(/\S*)?$"#, options: .regularExpression) != nil { return false }
         let lower = URL(string: s)?.scheme
         if let lower, ["http", "https", "file"].contains(lower) { return false }
 

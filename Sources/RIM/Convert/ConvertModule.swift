@@ -29,7 +29,7 @@ final class ConvertModel: ObservableObject {
         file = url
         actions = Converter.actions(for: url)
         status = .idle
-        message = actions.isEmpty ? "Notchpad can't convert .\(url.pathExtension.lowercased()) files yet." : nil
+        message = actions.isEmpty ? "RIM can't convert .\(url.pathExtension.lowercased()) files yet." : nil
     }
 
     func useFinderSelection() {
@@ -93,7 +93,7 @@ private struct ConvertView: View {
         }
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(Color.blue.opacity(targeted ? 0.9 : 0), lineWidth: 2)
+                .strokeBorder(Theme.accent.opacity(targeted ? 0.9 : 0), lineWidth: 2)
         )
     }
 
@@ -109,7 +109,7 @@ private struct ConvertView: View {
                 .background(Capsule().fill(.white.opacity(0.14)))
                 .foregroundStyle(.white)
             if let message = model.message {
-                Text(message).font(.caption2).foregroundStyle(.orange).multilineTextAlignment(.center)
+                Text(message).font(.caption2).foregroundStyle(Theme.accent).multilineTextAlignment(.center)
             }
         }
     }
@@ -135,7 +135,7 @@ private struct ConvertView: View {
     @ViewBuilder
     private var actionArea: some View {
         if let message = model.message {
-            Text(message).font(.caption).foregroundStyle(.orange)
+            Text(message).font(.caption).foregroundStyle(Theme.accent)
         }
         FlowRow(spacing: 6) {
             ForEach(model.actions) { action in
@@ -143,8 +143,8 @@ private struct ConvertView: View {
                     Text(action.title)
                         .font(.system(size: 11, weight: .medium))
                         .padding(.horizontal, 10).padding(.vertical, 5)
-                        .background(Capsule().fill(Color.purple.opacity(0.35)))
-                        .overlay(Capsule().strokeBorder(Color.purple.opacity(0.7), lineWidth: 0.5))
+                        .background(Capsule().fill(Theme.accent.opacity(0.18)))
+                        .overlay(Capsule().strokeBorder(Theme.accent.opacity(0.55), lineWidth: 0.5))
                         .foregroundStyle(.white)
                 }
                 .buttonStyle(.plain)
@@ -169,50 +169,18 @@ private struct ConvertView: View {
             }
         case .done(let url):
             HStack(spacing: 8) {
-                Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                Image(systemName: "checkmark.circle.fill").foregroundStyle(Theme.success)
                 Text("Saved \(url.lastPathComponent)").font(.caption).foregroundStyle(.white.opacity(0.85)).lineLimit(1)
                 Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
-                    .buttonStyle(.plain).font(.caption.weight(.medium)).foregroundStyle(.blue)
+                    .buttonStyle(.plain).font(.caption.weight(.medium)).foregroundStyle(Theme.accent)
             }
         case .failed(let reason):
-            Text(reason).font(.caption).foregroundStyle(.red).lineLimit(2)
+            Text(reason).font(.caption).foregroundStyle(Theme.warning).lineLimit(2)
         }
     }
 
     private func fileSize(_ url: URL) -> String {
         let bytes = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
         return ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
-    }
-}
-
-/// Minimal wrapping row layout for chips.
-private struct FlowRow: Layout {
-    var spacing: CGFloat
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        arrange(width: proposal.width ?? 400, subviews: subviews).size
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let result = arrange(width: bounds.width, subviews: subviews)
-        for (index, origin) in result.origins.enumerated() {
-            subviews[index].place(at: CGPoint(x: bounds.minX + origin.x, y: bounds.minY + origin.y), proposal: .unspecified)
-        }
-    }
-
-    private func arrange(width: CGFloat, subviews: Subviews) -> (origins: [CGPoint], size: CGSize) {
-        var origins: [CGPoint] = []
-        var x: CGFloat = 0, y: CGFloat = 0, rowHeight: CGFloat = 0, maxX: CGFloat = 0
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            if x > 0, x + size.width > width {
-                x = 0; y += rowHeight + spacing; rowHeight = 0
-            }
-            origins.append(CGPoint(x: x, y: y))
-            x += size.width + spacing
-            maxX = max(maxX, x - spacing)
-            rowHeight = max(rowHeight, size.height)
-        }
-        return (origins, CGSize(width: maxX, height: y + rowHeight))
     }
 }

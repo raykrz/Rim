@@ -91,7 +91,7 @@ enum PDFToWord {
         }
 
         let fm = FileManager.default
-        let dir = fm.temporaryDirectory.appendingPathComponent("notchpad-pdf-" + UUID().uuidString)
+        let dir = fm.temporaryDirectory.appendingPathComponent("rim-pdf-" + UUID().uuidString)
         try fm.createDirectory(at: dir.appendingPathComponent("word/media"), withIntermediateDirectories: true)
         try fm.createDirectory(at: dir.appendingPathComponent("word/_rels"), withIntermediateDirectories: true)
         try fm.createDirectory(at: dir.appendingPathComponent("_rels"), withIntermediateDirectories: true)

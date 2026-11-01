@@ -12,4 +12,9 @@ final class NotchState: ObservableObject {
     @Published var selectedModule = ModuleRegistry.all[0].id
     @Published var closedSize = CGSize(width: 190, height: 24)
     @Published var hasNotch = false
+
+    /// Size of the closed notch, wider while the focus timer shows its indicators on either side.
+    var collapsedSize: CGSize {
+        CGSize(width: closedSize.width + (FocusModel.shared.isActive ? 2 * NotchGeometry.wing : 0), height: closedSize.height)
+    }
 }

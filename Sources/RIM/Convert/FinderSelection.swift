@@ -20,7 +20,7 @@ enum FinderSelection {
         if let error {
             let code = error[NSAppleScript.errorNumber] as? Int
             if code == -1743 {
-                return .failure(ConvertError(message: "Allow Notchpad to control Finder in System Settings > Privacy & Security > Automation."))
+                return .failure(ConvertError(message: "Allow RIM to control Finder in System Settings > Privacy & Security > Automation."))
             }
             return .failure(ConvertError(message: "Couldn't read the Finder selection."))
         }

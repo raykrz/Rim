@@ -20,8 +20,8 @@ enum LibreOffice {
         guard let soffice = executable else { throw ConvertError(message: "LibreOffice isn't installed.") }
 
         let fm = FileManager.default
-        let work = fm.temporaryDirectory.appendingPathComponent("notchpad-lo-" + UUID().uuidString)
-        let profile = fm.temporaryDirectory.appendingPathComponent("notchpad-lo-profile")
+        let work = fm.temporaryDirectory.appendingPathComponent("rim-lo-" + UUID().uuidString)
+        let profile = fm.temporaryDirectory.appendingPathComponent("rim-lo-profile")
         try fm.createDirectory(at: work, withIntermediateDirectories: true)
         defer { try? fm.removeItem(at: work) }
 
