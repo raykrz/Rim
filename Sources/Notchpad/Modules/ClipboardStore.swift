@@ -8,9 +8,6 @@ struct ClipItem: Identifiable, Equatable {
     let kind: Kind
     let date: Date
     var fileURLs: [URL] = []
-    /// Every pasteboard item as it was copied (type to data), so files can be restored exactly as Finder wrote them.
-    var snapshot: [[NSPasteboard.PasteboardType: Data]] = []
-
     var preview: String {
         if kind == .secret { return "••••••••••••" }
         if kind == .file, let first = fileURLs.first {
@@ -72,26 +69,15 @@ final class ClipboardStore: ObservableObject {
         }
     }
 
-    /// Puts the files back with every flavor the source app wrote, falling back to plain file URLs.
+    /// Puts the files back as plain file URLs. Finder also attaches the file name as text and an icon
+    /// image, and chat apps like Discord then paste the icon instead of the file, so those are left out.
     private func restoreFiles(_ item: ClipItem, to pb: NSPasteboard) {
-        let pasteboardItems = item.snapshot.map { flavors -> NSPasteboardItem in
-            let entry = NSPasteboardItem()
-            for (type, data) in flavors { entry.setData(data, forType: type) }
-            return entry
-        }
-        if !pasteboardItems.isEmpty, pb.writeObjects(pasteboardItems) { return }
-        pb.clearContents()
-        pb.writeObjects(item.fileURLs as [NSURL])
+        let ok = pb.writeObjects(item.fileURLs as [NSURL])
+        DebugLog.write("restore ok=\(ok) readBack=\(Self.fileURLs(on: pb).count) types=\((pb.types ?? []).map(\.rawValue))")
     }
 
-    private static func snapshot(of pb: NSPasteboard) -> [[NSPasteboard.PasteboardType: Data]] {
-        (pb.pasteboardItems ?? []).map { entry in
-            var flavors: [NSPasteboard.PasteboardType: Data] = [:]
-            for type in entry.types where !type.rawValue.hasPrefix("dyn.") {
-                if let data = entry.data(forType: type) { flavors[type] = data }
-            }
-            return flavors
-        }
+    private static func fileURLs(on pb: NSPasteboard) -> [URL] {
+        (pb.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL]) ?? []
     }
 
     func remove(_ item: ClipItem) {
@@ -108,12 +94,14 @@ final class ClipboardStore: ObservableObject {
         lastChangeCount = pb.changeCount
 
         let types = pb.types ?? []
+        DebugLog.write("pasteboard changed types=\(types.map(\.rawValue)) items=\(pb.pasteboardItems?.count ?? 0)")
         guard !types.contains(where: Self.ignoredTypes.contains) else { return }
 
         let item: ClipItem
-        let files = (pb.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL]) ?? []
+        let files = Self.fileURLs(on: pb)
+        DebugLog.write("file urls read=\(files.count)")
         if !files.isEmpty {
-            item = ClipItem(text: files.map(\.path).joined(separator: "\n"), kind: .file, date: Date(), fileURLs: files, snapshot: Self.snapshot(of: pb))
+            item = ClipItem(text: files.map(\.path).joined(separator: "\n"), kind: .file, date: Date(), fileURLs: files)
         } else if let text = pb.string(forType: .string), !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             item = ClipItem(text: text, kind: Self.classify(text), date: Date())
         } else {

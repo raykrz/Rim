@@ -11,6 +11,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.controller = controller
         ClipboardStore.shared.start()
         installStatusItem()
+
+        // `Notchpad --pinned` starts with the notch held open, handy for screenshots and testing.
+        if CommandLine.arguments.contains("--pinned") {
+            controller.state.pinned = true
+            controller.open()
+        }
     }
 
     private func installStatusItem() {
