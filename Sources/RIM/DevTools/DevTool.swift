@@ -40,12 +40,15 @@ enum DevTools {
     // MARK: - JSON
 
     private static func json(_ input: String, pretty: Bool) throws -> String {
-        let object = try parseJSON(input)
+        try encodeJSON(try parseJSON(input), pretty: pretty)
+    }
+
+    /// Sorted keys, unescaped slashes, and `"key": value` spacing (Foundation prints `"key" : value`).
+    private static func encodeJSON(_ object: Any, pretty: Bool) throws -> String {
         var options: JSONSerialization.WritingOptions = [.sortedKeys, .withoutEscapingSlashes, .fragmentsAllowed]
         if pretty { options.insert(.prettyPrinted) }
         let data = try JSONSerialization.data(withJSONObject: object, options: options)
         let text = String(decoding: data, as: UTF8.self)
-        // Foundation prints `"key" : value`; developers expect `"key": value`.
         return pretty ? text.replacingOccurrences(of: "\" : ", with: "\": ") : text
     }
 
@@ -102,8 +105,7 @@ enum DevTools {
         }
 
         func pretty(_ object: Any) -> String {
-            let data = (try? JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])) ?? Data()
-            return String(decoding: data, as: UTF8.self)
+            (try? encodeJSON(object, pretty: true)) ?? ""
         }
 
         var output = "Header\n\(pretty(header))\n\nPayload\n\(pretty(payload))"

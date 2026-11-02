@@ -8,6 +8,7 @@ let package = Package(
         .executable(name: "RIM", targets: ["RIM"])
     ],
     targets: [
-        .executableTarget(name: "RIM", path: "Sources/RIM")
+        .executableTarget(name: "RIM", path: "Sources/RIM"),
+        .testTarget(name: "RIMTests", dependencies: ["RIM"], path: "Tests/RIMTests"),
     ]
 )
