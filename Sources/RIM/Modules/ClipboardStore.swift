@@ -1,15 +1,35 @@
 import AppKit
+import ImageIO
+
+struct ClipImage {
+    let data: Data
+    let type: NSPasteboard.PasteboardType
+    let thumbnail: NSImage
+    let pixelSize: CGSize
+}
 
 struct ClipItem: Identifiable, Equatable {
-    enum Kind { case text, code, link, secret, file }
+    enum Kind { case text, code, link, secret, file, image }
 
     let id = UUID()
     let text: String
     let kind: Kind
     let date: Date
     var fileURLs: [URL] = []
+    var image: ClipImage?
+    var pinned = false
+
+    static func == (lhs: ClipItem, rhs: ClipItem) -> Bool { lhs.id == rhs.id }
+
+    /// True when two items hold the same content, so a repeat copy replaces the old entry.
+    func hasSameContent(as other: ClipItem) -> Bool {
+        guard kind == other.kind else { return false }
+        return kind == .image ? image?.data == other.image?.data : text == other.text
+    }
+
     var preview: String {
         if kind == .secret { return "••••••••••••" }
+        if kind == .image, let size = image?.pixelSize { return "Image \(Int(size.width)) × \(Int(size.height))" }
         if kind == .file, let first = fileURLs.first {
             let extra = fileURLs.count - 1
             return extra > 0 ? "\(first.lastPathComponent) and \(extra) more" : first.lastPathComponent
@@ -28,6 +48,8 @@ final class ClipboardStore: ObservableObject {
     @Published private(set) var items: [ClipItem] = []
 
     private let maxItems = 40
+    private let maxImages = 8
+    private let maxImageBytes = 10_000_000
     private let secretLifetime: TimeInterval = 60
     private var lastChangeCount = NSPasteboard.general.changeCount
     private var timer: Timer?
@@ -43,17 +65,25 @@ final class ClipboardStore: ObservableObject {
 
     func start() {
         guard timer == nil else { return }
-        timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+        let timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.poll() }
         }
+        timer.tolerance = 0.25  // lets macOS batch these wake-ups with other work
+        RunLoop.main.add(timer, forMode: .common)
+        self.timer = timer
     }
+
+    // MARK: - Copy back
 
     func copy(_ item: ClipItem) {
         let pb = NSPasteboard.general
         pb.clearContents()
-        if item.kind == .file {
+        switch item.kind {
+        case .file:
             restoreFiles(item, to: pb)
-        } else {
+        case .image:
+            if let image = item.image { pb.setData(image.data, forType: image.type) }
+        default:
             pb.setString(item.text, forType: .string)
         }
         if item.kind == .secret {
@@ -61,11 +91,14 @@ final class ClipboardStore: ObservableObject {
             pb.setData(Data(), forType: Self.concealedType)
         }
         lastChangeCount = pb.changeCount
+        Haptics.tap()
         if item.kind == .secret {
             expire(item, clearingPasteboardAt: pb.changeCount)
         }
-        if let index = items.firstIndex(of: item), index != 0 {
-            items.insert(items.remove(at: index), at: 0)
+        // Move it to the top of the unpinned items. Pinned items stay where they are.
+        if !item.pinned, let index = items.firstIndex(of: item) {
+            let top = items.firstIndex { !$0.pinned } ?? 0
+            if index != top { items.insert(items.remove(at: index), at: top) }
         }
     }
 
@@ -80,13 +113,25 @@ final class ClipboardStore: ObservableObject {
         (pb.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL]) ?? []
     }
 
+    // MARK: - Editing the history
+
     func remove(_ item: ClipItem) {
         items.removeAll { $0 == item }
     }
 
-    func clear() {
-        items.removeAll()
+    /// Pinned items stay at the top and survive Clear. Secrets can't be pinned.
+    func togglePin(_ item: ClipItem) {
+        guard item.kind != .secret, let index = items.firstIndex(of: item) else { return }
+        items[index].pinned.toggle()
+        items = items.filter(\.pinned) + items.filter { !$0.pinned }
     }
+
+    /// Clears everything except pinned items.
+    func clear() {
+        items.removeAll { !$0.pinned }
+    }
+
+    // MARK: - Watching
 
     private func poll() {
         let pb = NSPasteboard.general
@@ -104,17 +149,55 @@ final class ClipboardStore: ObservableObject {
             item = ClipItem(text: files.map(\.path).joined(separator: "\n"), kind: .file, date: Date(), fileURLs: files)
         } else if let text = pb.string(forType: .string), !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             item = ClipItem(text: text, kind: Self.classify(text), date: Date())
+        } else if let image = readImage(from: pb) {
+            item = ClipItem(text: "image", kind: .image, date: Date(), image: image)
         } else {
             return
         }
 
-        items.removeAll { $0.text == item.text && $0.kind == item.kind }
-        items.insert(item, at: 0)
-        if items.count > maxItems { items.removeLast(items.count - maxItems) }
+        // A repeat copy replaces the old entry, but keeps a pin.
+        let wasPinned = items.first { $0.hasSameContent(as: item) }?.pinned ?? false
+        items.removeAll { $0.hasSameContent(as: item) }
+        var fresh = item
+        fresh.pinned = wasPinned
+        items.insert(fresh, at: wasPinned ? 0 : (items.firstIndex { !$0.pinned } ?? items.count))
+        trim()
 
         if item.kind == .secret {
             expire(item, clearingPasteboardAt: pb.changeCount)
         }
+    }
+
+    /// Screenshots and copied pictures. Only used when there's no text, so copying from a
+    /// spreadsheet or document doesn't also store a preview picture.
+    private func readImage(from pb: NSPasteboard) -> ClipImage? {
+        for type in [NSPasteboard.PasteboardType.png, .tiff] {
+            guard let data = pb.data(forType: type), data.count <= maxImageBytes,
+                  let source = CGImageSourceCreateWithData(data as CFData, nil),
+                  let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+                  let width = properties[kCGImagePropertyPixelWidth] as? CGFloat,
+                  let height = properties[kCGImagePropertyPixelHeight] as? CGFloat else { continue }
+
+            let options: [CFString: Any] = [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+                kCGImageSourceThumbnailMaxPixelSize: 96,
+            ]
+            guard let cgThumbnail = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { continue }
+            let thumbnail = NSImage(cgImage: cgThumbnail, size: NSSize(width: cgThumbnail.width, height: cgThumbnail.height))
+            return ClipImage(data: data, type: type, thumbnail: thumbnail, pixelSize: CGSize(width: width, height: height))
+        }
+        return nil
+    }
+
+    /// Keeps memory bounded: at most 40 unpinned items and 8 unpinned pictures.
+    private func trim() {
+        func dropOldest(where match: (ClipItem) -> Bool, keeping limit: Int) {
+            let matches = items.indices.filter { !items[$0].pinned && match(items[$0]) }
+            for index in matches.dropFirst(limit).reversed() { items.remove(at: index) }
+        }
+        dropOldest(where: { $0.kind == .image }, keeping: maxImages)
+        dropOldest(where: { _ in true }, keeping: maxItems)
     }
 
     /// Drops a secret from history after `secretLifetime`, and wipes the system pasteboard too
@@ -131,6 +214,8 @@ final class ClipboardStore: ObservableObject {
         }
     }
 
+    // MARK: - Classification
+
     /// Heuristic: one whitespace-free token of 8-64 characters mixing at least three of
     /// lowercase, uppercase, digits and symbols, and either containing a symbol or being 12+ long.
     /// Rejects anything with quotes, braces or angle brackets, or that starts like a path. It will sometimes flag identifiers; those are only masked, never lost.
@@ -140,8 +225,8 @@ final class ClipboardStore: ObservableObject {
         guard !s.contains(where: { "\"{}<>".contains($0) }), !["/", "~", ".", "["].contains(where: { s.hasPrefix($0) }) else { return false }
         // Bare domains and links like github.com/user/repo have mixed characters too, but aren't passwords.
         if s.range(of: #"^[A-Za-z0-9.-]+\.[A-Za-z]{2,}(/\S*)?$"#, options: .regularExpression) != nil { return false }
-        let lower = URL(string: s)?.scheme
-        if let lower, ["http", "https", "file"].contains(lower) { return false }
+        let scheme = URL(string: s)?.scheme
+        if let scheme, ["http", "https", "file"].contains(scheme) { return false }
 
         let hasLower = s.contains { $0.isLowercase }
         let hasUpper = s.contains { $0.isUppercase }

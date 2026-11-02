@@ -12,6 +12,7 @@ private struct ClipboardView: View {
     @ObservedObject private var store = ClipboardStore.shared
     @State private var copiedID: UUID?
     @State private var revealedID: UUID?
+    @State private var hoveredID: UUID?
 
     var body: some View {
         if store.items.isEmpty {
@@ -34,6 +35,7 @@ private struct ClipboardView: View {
                     Spacer()
                     Button("Clear") { store.clear() }
                         .buttonStyle(.plain).font(.caption2).foregroundStyle(.white.opacity(0.6))
+                        .help("Clears everything except pinned items")
                 }
             }
         }
@@ -51,16 +53,15 @@ private struct ClipboardView: View {
                 }
             } label: {
                 HStack(spacing: 8) {
-                    if item.kind == .file, let url = item.fileURLs.first {
-                        Image(nsImage: NSWorkspace.shared.icon(forFile: url.path)).resizable().frame(width: 16, height: 16)
-                    } else {
-                        Image(systemName: icon(item.kind)).frame(width: 16).foregroundStyle(tint(item.kind))
-                    }
+                    leadingIcon(item)
                     Text(isSecret && revealed ? item.text : item.preview)
                         .font(item.kind == .code || isSecret ? .system(size: 12, design: .monospaced) : .system(size: 12))
                         .foregroundStyle(.white.opacity(0.9))
                         .lineLimit(1)
                     Spacer(minLength: 8)
+                    if item.pinned {
+                        Image(systemName: "pin.fill").font(.system(size: 9)).foregroundStyle(Theme.accent)
+                    }
                     Text(copiedID == item.id ? "Copied" : label(item.kind))
                         .font(.caption2).foregroundStyle(copiedID == item.id ? Theme.success : .white.opacity(0.4))
                 }
@@ -83,13 +84,34 @@ private struct ClipboardView: View {
                 .help("Reveal for 5 seconds")
             }
         }
-        .padding(.horizontal, 10).padding(.vertical, 6)
-        .background(RoundedRectangle(cornerRadius: 8).fill(.white.opacity(0.07)))
+        .padding(.horizontal, 10).padding(.vertical, item.kind == .image ? 4 : 6)
+        .background(RoundedRectangle(cornerRadius: 8).fill(.white.opacity(hoveredID == item.id ? 0.12 : 0.07)))
+        .animation(.easeOut(duration: 0.12), value: hoveredID)
+        .onHover { hovering in
+            if hovering { hoveredID = item.id } else if hoveredID == item.id { hoveredID = nil }
+        }
         .contextMenu {
+            if item.kind != .secret {
+                Button(item.pinned ? "Unpin" : "Pin to top") { store.togglePin(item) }
+            }
             if item.kind == .file {
                 Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting(item.fileURLs) }
             }
             Button("Remove") { store.remove(item) }
+        }
+    }
+
+    @ViewBuilder
+    private func leadingIcon(_ item: ClipItem) -> some View {
+        if item.kind == .image, let image = item.image {
+            Image(nsImage: image.thumbnail)
+                .resizable().scaledToFill()
+                .frame(width: 34, height: 22)
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+        } else if item.kind == .file, let url = item.fileURLs.first {
+            Image(nsImage: NSWorkspace.shared.icon(forFile: url.path)).resizable().frame(width: 16, height: 16)
+        } else {
+            Image(systemName: icon(item.kind)).frame(width: 16).foregroundStyle(tint(item.kind))
         }
     }
 
@@ -100,16 +122,16 @@ private struct ClipboardView: View {
         case .link: return "link"
         case .secret: return "key.fill"
         case .file: return "doc"
+        case .image: return "photo"
         }
     }
 
     private func tint(_ kind: ClipItem.Kind) -> Color {
         switch kind {
-        case .text: return .white.opacity(0.6)
+        case .text, .file, .image: return .white.opacity(0.6)
         case .code: return Theme.accent
         case .link: return .white.opacity(0.85)
         case .secret: return Theme.warning
-        case .file: return .white.opacity(0.6)
         }
     }
 
@@ -120,6 +142,7 @@ private struct ClipboardView: View {
         case .link: return "link"
         case .secret: return "secret · wiped in 60s"
         case .file: return "file"
+        case .image: return "image"
         }
     }
 }

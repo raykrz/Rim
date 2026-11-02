@@ -52,6 +52,16 @@ Open the ⋯ menu inside the notch and turn on Launch at login. This works from 
 
 To update, quit RIM from the ⋯ menu and replace the app with the new version. To uninstall, quit it and drag `RIM.app` to the Trash. RIM stores nothing else, apart from a daily focus-session count in your preferences and an optional log if you ever run it with `--debug`.
 
+## Keyboard
+
+| Keys | What it does |
+|---|---|
+| ⌃⌥R | Open the notch and hold it open, or close it. |
+| Esc | Close the notch. |
+| ⌘1 to ⌘5 | Jump to a tab while the notch has keyboard focus. |
+
+The shortcut works from any app and needs no extra permission. RIM also gives a light trackpad tap when the notch opens and when you copy an item back.
+
 ## Permissions
 
 RIM asks only for what a feature needs, the first time you use it.
@@ -67,7 +77,7 @@ If you said no by mistake, change it in System Settings > Privacy & Security > A
 
 | Tab | What you get |
 |---|---|
-| Clipboard | History of text, code, links and files. Passwords and keys are masked and wiped after a minute. |
+| Clipboard | History of text, code, links, files and screenshots. Pin what you reuse. Passwords and keys are masked and wiped after a minute. |
 | Convert | Drop a file or use the Finder selection and convert it. |
 | Shelf | Park files for a moment and drag them out into any app. |
 | Dev tools | JSON, Base64, JWT, hashes, timestamps, colors and more on your clipboard text. |
@@ -75,7 +85,7 @@ If you said no by mistake, change it in System Settings > Privacy & Security > A
 
 ### Clipboard
 
-Click an item to copy it back. Files restore as real files you can paste into Finder, Mail or chat apps. Right-click an item to remove it, or to show a file in Finder.
+Click an item to copy it back. Files restore as real files you can paste into Finder, Mail or chat apps. Screenshots and copied pictures show a thumbnail (the last 8 are kept). Right-click an item to pin it to the top, remove it, or show a file in Finder. Pinned items survive Clear.
 
 - History lives in memory only and is never written to disk.
 - Items that password managers mark as concealed are ignored.
@@ -128,6 +138,8 @@ The right half shows what Spotify or Music is playing, with previous, play/pause
 Near-black, one violet accent, no chrome. The tabs are icons and the selected one shows its name. A thin edge of light runs along the bottom of the open notch, which is where the name comes from. The icon and banner are drawn by `scripts/make-assets.swift`, so they stay in the same style as the app. Run `./scripts/make-icon.sh` to regenerate them.
 
 ## Contributing
+
+Run the tests with `./scripts/test.sh`. It uses Swift Testing, and the script points SwiftPM at the copy inside the Command Line Tools when Xcode isn't installed. CI runs them on every push.
 
 Each tab is a module: conform to `NotchModule` in `Sources/RIM/` and add it to `ModuleRegistry` in `Modules/Module.swift`. Releases are built by GitHub Actions when a tag like `v0.1.0` is pushed.
 

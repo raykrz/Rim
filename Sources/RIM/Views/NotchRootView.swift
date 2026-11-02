@@ -35,7 +35,10 @@ struct NotchRootView: View {
             if state.isOpen {
                 content
                     .frame(width: size.width, height: size.height, alignment: .top)
-                    .transition(.opacity.animation(.easeOut(duration: 0.15).delay(0.12)))
+                    .transition(
+                        .opacity.combined(with: .scale(scale: 0.97, anchor: .top))
+                        .animation(.easeOut(duration: 0.18).delay(0.1))
+                    )
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)

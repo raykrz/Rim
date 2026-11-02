@@ -18,6 +18,24 @@ final class NotchPanel: NSPanel {
         collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]
     }
 
+    var onEscape: (() -> Void)?
+    var onSelectTab: ((Int) -> Void)?
+
+    /// Esc closes the notch.
+    override func cancelOperation(_ sender: Any?) {
+        onEscape?()
+    }
+
+    /// ⌘1 to ⌘5 jump to a tab while the notch has keyboard focus.
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command,
+           let digit = event.charactersIgnoringModifiers.flatMap({ Int($0) }), (1...9).contains(digit) {
+            onSelectTab?(digit - 1)
+            return true
+        }
+        return super.performKeyEquivalent(with: event)
+    }
+
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
 }

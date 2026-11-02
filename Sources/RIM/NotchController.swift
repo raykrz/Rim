@@ -1,4 +1,5 @@
 import AppKit
+import Carbon.HIToolbox
 import SwiftUI
 
 /// Owns the panel and decides when the notch opens and closes based on the mouse position.
@@ -21,17 +22,24 @@ final class NotchController {
 
     func start() {
         FocusModel.shared.onFinish = { [weak self] in self?.announceFocusFinished() }
+        panel.onEscape = { [weak self] in self?.dismiss() }
+        panel.onSelectTab = { [weak self] index in self?.selectTab(index) }
+        hotKey = HotKey(keyCode: kVK_ANSI_R, modifiers: controlKey | optionKey) { [weak self] in self?.toggleFromKeyboard() }
+        DebugLog.write("hotkey ⌃⌥R \(hotKey == nil ? "unavailable" : "registered")")
         applyGeometry()
         panel.contentView = NSHostingView(rootView: NotchRootView(state: state))
         panel.ignoresMouseEvents = true
         panel.orderFrontRegardless()
 
         let mask: NSEvent.EventTypeMask = [.mouseMoved, .leftMouseDragged, .leftMouseDown, .leftMouseUp]
+        // Mouse events arrive on the main thread, so handle them directly instead of spawning a task per movement.
         let global = NSEvent.addGlobalMonitorForEvents(matching: mask) { [weak self] event in
-            Task { @MainActor in self?.handle(event.type) }
+            let type = event.type
+            if Thread.isMainThread { MainActor.assumeIsolated { self?.handle(type) } } else { Task { @MainActor in self?.handle(type) } }
         }
         let local = NSEvent.addLocalMonitorForEvents(matching: mask) { [weak self] event in
-            Task { @MainActor in self?.handle(event.type) }
+            let type = event.type
+            if Thread.isMainThread { MainActor.assumeIsolated { self?.handle(type) } } else { Task { @MainActor in self?.handle(type) } }
             return event
         }
         monitors = [global, local].compactMap { $0 }
@@ -50,6 +58,33 @@ final class NotchController {
         panel.ignoresMouseEvents = false
         state.isDragging = isDraggingFiles
         state.isOpen = true
+        Haptics.tap()
+    }
+
+    // MARK: - Keyboard
+
+    /// ⌃⌥R: open and hold the notch for keyboard use, or close it again.
+    func toggleFromKeyboard() {
+        if state.isOpen {
+            state.pinned = false
+            close()
+        } else {
+            state.pinned = true
+            open()
+            panel.makeKey()
+        }
+    }
+
+    /// Esc closes the notch, even when it was pinned.
+    func dismiss() {
+        state.pinned = false
+        close()
+    }
+
+    func selectTab(_ index: Int) {
+        guard ModuleRegistry.all.indices.contains(index) else { return }
+        state.selectedModule = ModuleRegistry.all[index].id
+        state.isDragging = false
     }
 
     /// True while the user is mid-drag with files from Finder or another app.
@@ -79,6 +114,7 @@ final class NotchController {
     // MARK: - Hover logic
 
     private var dragPoll: Timer?
+    private var hotKey: HotKey?
 
     private func handle(_ type: NSEvent.EventType) {
         switch type {
@@ -113,7 +149,10 @@ final class NotchController {
     }
 
     private func mouseChanged() {
-        let inside = hoverRect.contains(NSEvent.mouseLocation)
+        let point = NSEvent.mouseLocation
+        // Most mouse movement is nowhere near the notch. Skip all work for it.
+        if !state.isOpen, openWork == nil, point.y < geometry.screen.frame.maxY - 40 { return }
+        let inside = hoverRect.contains(point)
         if inside {
             closeWork?.cancel()
             closeWork = nil
